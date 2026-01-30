@@ -20,6 +20,7 @@ const compression = require('compression');
 const hpp = require('hpp');
 const sanitize = require('mongo-sanitize');
 const env = require('./config/env');
+const decisionRoutes = require('./routes/decisionRoutes');
 
 // IMPORTACION DE RUTAS
 const authRoutes = require('./routes/authRoutes');
@@ -69,5 +70,7 @@ app.use(function(err, req, res, next) {
         message: err.message || 'Error interno del servidor'
     });
 });
+
+app.use('/api/decisions', decisionRoutes);
 
 module.exports = app;
