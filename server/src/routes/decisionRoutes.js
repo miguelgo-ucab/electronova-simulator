@@ -1,11 +1,11 @@
 // ============================================
 // FILE: /server/src/routes/decisionRoutes.js
-// VERSION: 1.0.0
+// VERSION: 1.1.1
 // DATE: 30-01-2026
-// HOUR: 10:15
-// PURPOSE: Rutas para el envio de decisiones de los jugadores.
-// CHANGE LOG: Implementacion de ruta POST para abastecimiento con proteccion JWT.
-// SPEC REF: Seccion 5 - Endpoints REST
+// HOUR: 21:30
+// PURPOSE: Estructura de rutas para decisiones de juego.
+// CHANGE LOG: Verificacion de endpoint /save.
+// SPEC REF: Seccion 5.1 - Formulario de Decisiones
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
 //
@@ -18,10 +18,10 @@ const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
-// Todas las rutas requieren autenticacion
+// Middleware de proteccion global para estas rutas
 router.use(authMiddleware.protect);
 
-// Ruta para guardar/actualizar compras de materia prima
-router.post('/procurement', decisionController.saveProcurementDecision);
+// Endpoint para guardar decisiones (Abastecimiento y Produccion)
+router.post('/save', decisionController.saveDecision);
 
 module.exports = router;

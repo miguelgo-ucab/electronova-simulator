@@ -1,10 +1,10 @@
 // ============================================
 // FILE: /server/src/routes/adminRoutes.js
-// VERSION: 1.0.0
+// VERSION: 1.2.0
 // DATE: 30-01-2026
-// HOUR: 11:25
-// PURPOSE: Rutas protegidas para la gestion docente del simulador.
-// CHANGE LOG: Aplicacion de middleware restrictTo('admin').
+// HOUR: 22:30
+// PURPOSE: Definicion de rutas administrativas protegidas por rol.
+// CHANGE LOG: Registro del endpoint /process-logistics.
 // SPEC REF: Seccion 5.2 - Panel de Administracion
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
@@ -18,13 +18,14 @@ const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
-// 1. Proteger todas las rutas: Solo usuarios logueados
+// Proteccion global: Solo usuarios autenticados y con rol 'admin'
 router.use(authMiddleware.protect);
-
-// 2. Restringir todas las rutas: Solo usuarios con rol 'admin'
 router.use(authMiddleware.restrictTo('admin'));
 
-// Ruta para procesar el cierre de abastecimiento
+// Endpoints de Cierre de Fase
 router.post('/process-procurement', adminController.processProcurementPhase);
+router.post('/process-production', adminController.processProductionPhase);
+router.post('/process-logistics', adminController.processLogisticsPhase);
+router.post('/process-sales', adminController.processSalesPhase);
 
 module.exports = router;
