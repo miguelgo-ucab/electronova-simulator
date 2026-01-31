@@ -1,10 +1,10 @@
 // ============================================
 // FILE: /server/src/middlewares/authMiddleware.js
-// VERSION: 1.1.1
-// DATE: 29-01-2026
-// HOUR: 23:15
-// PURPOSE: Verificacion de JWT y proteccion de rutas (Corregido).
-// CHANGE LOG: Eliminacion de residuo de comando 'cls' al final del archivo.
+// VERSION: 1.1.2
+// DATE: 30-01-2026
+// HOUR: 21:15
+// PURPOSE: Mejora de logs de auditoria para roles de usuario.
+// CHANGE LOG: Inclusion de console.warn para intentos de acceso no autorizados.
 // SPEC REF: Requisitos No Funcionales - Seguridad
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
@@ -57,11 +57,14 @@ exports.protect = async function(req, res, next) {
 };
 
 /**
- * Middleware para restringir acceso segun el Rol (ej. solo Admin).
+ * Middleware para restringir acceso segun el Rol.
+ * Corregido para mayor trazabilidad en consola.
  */
 exports.restrictTo = function(...roles) {
     return function(req, res, next) {
+        // Si el rol del usuario no esta en la lista permitida
         if (!roles.includes(req.user.role)) {
+            console.warn(`[SECURITY ALERT] Acceso denegado. Usuario: ${req.user.email} | Rol: ${req.user.role} | Requerido: ${roles}`);
             const err = new Error('No tienes permiso para realizar esta accion.');
             err.status = 403;
             return next(err);

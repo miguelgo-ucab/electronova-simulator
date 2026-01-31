@@ -21,6 +21,7 @@ const hpp = require('hpp');
 const sanitize = require('mongo-sanitize');
 const env = require('./config/env');
 const decisionRoutes = require('./routes/decisionRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 // IMPORTACION DE RUTAS
 const authRoutes = require('./routes/authRoutes');
@@ -72,5 +73,6 @@ app.use(function(err, req, res, next) {
 });
 
 app.use('/api/decisions', decisionRoutes);
+app.use('/api/admin', adminRoutes);
 
 module.exports = app;
