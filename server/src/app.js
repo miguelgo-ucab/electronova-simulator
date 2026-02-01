@@ -1,11 +1,11 @@
 // ============================================
 // FILE: /server/src/app.js
-// VERSION: 1.8.0
-// DATE: 31-01-2026
-// HOUR: 14:10
-// PURPOSE: Ajuste de CORS para permitir conexion desde el puerto 5173.
-// CHANGE LOG: Configuracion explicita de origin para evitar bloqueos.
-// SPEC REF: Resumen de arquitectura de conexion - Seccion 3
+// VERSION: 1.8.2
+// DATE: 01-02-2026
+// HOUR: 16:35
+// PURPOSE: Registro definitivo de rutas de mercado para el Frontend.
+// CHANGE LOG: Verificación de importaciones y middleware de rutas.
+// SPEC REF: Sección 3.1 - Arquitectura
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
 //
@@ -20,12 +20,14 @@ const compression = require('compression');
 const hpp = require('hpp');
 const sanitize = require('mongo-sanitize');
 const env = require('./config/env');
-const decisionRoutes = require('./routes/decisionRoutes');
-const adminRoutes = require('./routes/adminRoutes');
+
 
 // IMPORTACION DE RUTAS
 const authRoutes = require('./routes/authRoutes');
 const companyRoutes = require('./routes/companyRoutes');
+const decisionRoutes = require('./routes/decisionRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const marketRoutes = require('./routes/marketRoutes');
 
 const app = express();
 
@@ -53,6 +55,9 @@ app.use(hpp());
 // Importante: El orden importa. Primero las rutas, luego los errores.
 app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
+app.use('/api/decisions', decisionRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/markets', marketRoutes);
 
 // 4. RUTA DE SALUD
 app.get('/api/health', function(req, res) {
@@ -75,8 +80,5 @@ app.use(function(err, req, res, next) {
         message: err.message || 'Error interno del servidor'
     });
 });
-
-app.use('/api/decisions', decisionRoutes);
-app.use('/api/admin', adminRoutes);
 
 module.exports = app;
