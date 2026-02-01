@@ -1,11 +1,11 @@
 // ============================================
 // FILE: /client/src/pages/DecisionPage.jsx
-// VERSION: 1.4.0
+// VERSION: 1.5.0
 // DATE: 01-02-2026
-// HOUR: 09:50
-// PURPOSE: Blindaje visual total y formato monetario regional (punto para miles).
-// CHANGE LOG: Implementación de formatMoney, estilos inline forzados y botones disjuntos.
-// SPEC REF: Sección 2.2.A (Capacidad) y Manual de Estilo (Fórmulas)
+// HOUR: 11:40
+// PURPOSE: Blindaje total de animaciones y formato monetario de alta precision.
+// CHANGE LOG: Inyeccion de CSS Keyframes para parpadeo y validacion de costos.
+// SPEC REF: Seccion 2.2.A (Capacidad) y 2.3 (Motor de Mercado)
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
 //
@@ -51,7 +51,6 @@ const DecisionPage = () => {
     loadCompany();
   }, []);
 
-  // FUNCIÓN DE FORMATO MONETARIO (Punto para miles, coma para decimal)
   const formatMoney = (amount) => {
     return new Intl.NumberFormat('de-DE', {
       minimumFractionDigits: 2,
@@ -110,7 +109,20 @@ const DecisionPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      {/* NAV CON BLINDAJE DE ESTILOS */}
+      {/* INYECCION DE CSS PARA PARPADEO FORZADO */}
+      <style>
+        {`
+          @keyframes critical-blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+          }
+          .animate-blink {
+            animation: critical-blink 0.8s infinite;
+          }
+        `}
+      </style>
+
       <nav className="bg-[#0F172A] text-white p-4 shadow-2xl flex justify-between items-center sticky top-0 z-20 border-b border-slate-800">
         <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 hover:text-blue-400 transition-colors font-bold text-sm">
           <ArrowLeft size={18} /> VOLVER AL CENTRO DE MANDO
@@ -125,14 +137,13 @@ const DecisionPage = () => {
           </div>
           <div className="text-right">
             <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-1">Capacidad Disponible</p>
-            <p className={`text-xl font-mono ${isOverQuota ? 'animate-pulse' : ''}`} style={{ color: isOverQuota ? '#EF4444' : '#FFFFFF', fontWeight: 'bold' }}>
+            <p className={`text-xl font-mono ${isOverQuota ? 'animate-blink' : ''}`} style={{ color: isOverQuota ? '#EF4444' : '#FFFFFF', fontWeight: 'bold' }}>
               {remainingQuota} <span className="text-xs opacity-50">u.</span>
             </p>
           </div>
 
-          {/* BOTONES DISJUNTOS PARA ELIMINAR HOVER RESIDUAL */}
           {isInteractionDisabled ? (
-            <button disabled className="ml-4 px-8 py-3 rounded-xl font-black bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed flex items-center gap-2">
+            <button disabled className="ml-4 px-8 py-3 rounded-xl font-black bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed flex items-center gap-2 transition-none">
               <Save size={20} /> {loading ? 'PROCESANDO...' : 'ENVIAR ESTRATEGIA'}
             </button>
           ) : (
@@ -159,7 +170,7 @@ const DecisionPage = () => {
       <main className="flex-1 p-8">
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden min-h-[500px]">
           {activeTab === 'procurement' && (
-            <div className="p-12">
+            <div className="p-12 animate-in fade-in duration-300">
               <h3 className="text-2xl font-black text-[#0F172A] mb-8 flex items-center gap-3 tracking-tight">
                 <div className="w-2 h-8 bg-blue-600 rounded-full"></div>
                 ÓRDENES DE MATERIA PRIMA
@@ -203,7 +214,7 @@ const DecisionPage = () => {
           )}
 
           {activeTab === 'production' && (
-            <div className="p-12">
+            <div className="p-12 animate-in fade-in duration-300">
               <h3 className="text-2xl font-black text-[#0F172A] mb-8 flex items-center gap-3 tracking-tight">
                 <div className="w-2 h-8 bg-blue-600 rounded-full"></div>
                 PLANIFICACIÓN DE PLANTA
