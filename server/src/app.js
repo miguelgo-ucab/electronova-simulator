@@ -1,11 +1,11 @@
 // ============================================
 // FILE: /server/src/app.js
-// VERSION: 1.7.1
-// DATE: 29-01-2026
-// HOUR: 23:25
-// PURPOSE: Mejora del logging de errores para depuracion de credenciales.
-// CHANGE LOG: Inclusion de detalles de ruta en el log de error del servidor.
-// SPEC REF: Seccion 3.1 - Arquitectura
+// VERSION: 1.8.0
+// DATE: 31-01-2026
+// HOUR: 14:10
+// PURPOSE: Ajuste de CORS para permitir conexion desde el puerto 5173.
+// CHANGE LOG: Configuracion explicita de origin para evitar bloqueos.
+// SPEC REF: Resumen de arquitectura de conexion - Seccion 3
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
 //
@@ -31,7 +31,11 @@ const app = express();
 
 // 1. SEGURIDAD Y PERFORMANCE
 app.use(helmet({ contentSecurityPolicy: false, hidePoweredBy: true }));
-app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
+app.use(cors({
+    origin: 'http://localhost:5173', // Puerto por defecto de Vite
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+}));
 app.use(compression());
 app.use(morgan('dev'));
 
