@@ -28,6 +28,7 @@ const companyRoutes = require('./routes/companyRoutes');
 const decisionRoutes = require('./routes/decisionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const marketRoutes = require('./routes/marketRoutes');
+const gameRoutes = require('./routes/gameRoutes');
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use('/api/companies', companyRoutes);
 app.use('/api/decisions', decisionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/markets', marketRoutes);
+app.use('/api/games', gameRoutes);
 
 // 4. RUTA DE SALUD
 app.get('/api/health', function(req, res) {
