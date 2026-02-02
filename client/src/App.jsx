@@ -14,7 +14,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
-import DecisionPage from './pages/DecisionPage'; // NUEVO
+import DecisionPage from './pages/DecisionPage';
+import { socket } from './services/socket'; 
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
