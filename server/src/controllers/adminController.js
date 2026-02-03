@@ -1,11 +1,11 @@
 // ============================================
 // FILE: /server/src/controllers/adminController.js
-// VERSION: 1.3.0
-// DATE: 01-02-2026
-// HOUR: 20:50
-// PURPOSE: Triggers administrativos con notificaciones en tiempo real (Socket.IO).
-// CHANGE LOG: Integracion de gatillos de notificacion en la fase de ventas.
-// SPEC REF: Seccion 4.2 (Flujo de Procesamiento) y 3.5 (WebSockets)
+// VERSION: 1.4.1
+// DATE: 02-02-2026
+// HOUR: 22:45
+// PURPOSE: Controlador administrativo dinámico con corrección de visibilidad de sala.
+// CHANGE LOG: Ajuste de getActiveGame para soportar estados 'waiting' y 'active'.
+// SPEC REF: Sección 5.2 - Panel de Administración
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
 //
@@ -13,24 +13,32 @@
 //
 
 const simulationService = require('../services/simulationService');
+const Game = require('../models/Game');
+const Company = require('../models/Company');
 
 /**
- * Fase 1: Cierre de Abastecimiento (Compra de Materia Prima)
- * Procesa las ordenes de compra y crea lotes en transito.
+ * Función interna de utilidad para obtener la partida actual.
+ * MODIFICACIÓN 1.4.1: Busca cualquier partida no finalizada (waiting o active).
+ * Garantiza que el administrador vea la sala incluso antes de iniciarla formalmente.
+ */
+const getActiveGame = async () => {
+    const game = await Game.findOne({ status: { $ne: 'finished' } }).sort({ createdAt: -1 });
+    if (!game) throw new Error('No se encontró ninguna partida configurada en el sistema.');
+    return game;
+};
+
+/**
+ * Fase 1: Cierre de Abastecimiento.
  */
 exports.processProcurementPhase = async function(req, res, next) {
     try {
-        const { round } = req.body;
-        if (!round) {
-            const err = new Error('Debe especificar la ronda a procesar.');
-            err.status = 400;
-            return next(err);
-        }
-        const processedCount = await simulationService.processRoundProcurement(round);
+        const game = await getActiveGame();
+        const processedCount = await simulationService.processRoundProcurement(game.currentRound);
+        
         res.status(200).json({
             status: 'success',
-            message: 'Fase de abastecimiento procesada correctamente.',
-            data: { round, companiesProcessed: processedCount }
+            message: `Abastecimiento de la Ronda ${game.currentRound} procesado.`,
+            data: { round: game.currentRound, companiesProcessed: processedCount }
         });
     } catch (error) {
         next(error);
@@ -38,17 +46,17 @@ exports.processProcurementPhase = async function(req, res, next) {
 };
 
 /**
- * Fase 2: Cierre de Manufactura (Transformacion de MP a PT)
- * Consume materia prima disponible y genera producto terminado en fabrica.
+ * Fase 2: Cierre de Manufactura.
  */
 exports.processProductionPhase = async function(req, res, next) {
     try {
-        const { round } = req.body;
-        const processedCount = await simulationService.processRoundProduction(round);
+        const game = await getActiveGame();
+        const processedCount = await simulationService.processRoundProduction(game.currentRound);
+        
         res.status(200).json({
             status: 'success',
-            message: 'Fase de manufactura procesada correctamente.',
-            data: { companiesProcessed: processedCount }
+            message: `Manufactura de la Ronda ${game.currentRound} procesada.`,
+            data: { round: game.currentRound, companiesProcessed: processedCount }
         });
     } catch (error) {
         next(error);
@@ -56,18 +64,17 @@ exports.processProductionPhase = async function(req, res, next) {
 };
 
 /**
- * Fase 3: Cierre de Logistica (Distribucion a Plazas de Venta)
- * Mueve el PT de fabrica a las plazas comerciales elegidas por el jugador.
+ * Fase 3: Cierre de Logística.
  */
 exports.processLogisticsPhase = async function(req, res, next) {
     try {
-        const { round } = req.body;
-        const processedCount = await simulationService.processRoundLogistics(round);
+        const game = await getActiveGame();
+        const processedCount = await simulationService.processRoundLogistics(game.currentRound);
 
         res.status(200).json({
             status: 'success',
-            message: 'Fase de logistica y despacho procesada correctamente.',
-            data: { companiesProcessed: processedCount }
+            message: `Logística de la Ronda ${game.currentRound} procesada.`,
+            data: { round: game.currentRound, companiesProcessed: processedCount }
         });
     } catch (error) {
         next(error);
@@ -75,78 +82,49 @@ exports.processLogisticsPhase = async function(req, res, next) {
 };
 
 /**
- * Fase 4: Cierre de Mercado (Ventas Finales y Contabilidad)
- * GATILLO DE TIEMPO REAL: Notifica a todos los clientes conectados.
+ * Fase 4: Cierre de Mercado (Ventas).
+ * GATILLO DE TIEMPO REAL: Notifica a todos los terminales conectados.
  */
 exports.processSalesPhase = async function(req, res, next) {
     try {
-        const { round } = req.body;
-        if (!round) {
-            const err = new Error('Ronda no especificada para el cierre de ventas.');
-            err.status = 400;
-            return next(err);
-        }
+        const game = await getActiveGame();
+        const processedCount = await simulationService.processRoundSales(game.currentRound);
 
-        // 1. Ejecutar el motor de mercado ECPCIM
-        const processedCount = await simulationService.processRoundSales(round);
-
-        // 2. EMISION EN TIEMPO REAL (Gatillo de Notificacion)
-        // Verificamos si el objeto global io esta disponible
         if (global.io) {
             global.io.emit('roundProcessed', {
-                round: round,
+                round: game.currentRound,
                 timestamp: new Date().toISOString(),
-                message: '¡La simulacion de mercado ha finalizado! Revise su Dashboard.'
+                message: `Mercado de Ronda ${game.currentRound} cerrado. Resultados disponibles.`
             });
-            console.log(`[SOCKET] Notificacion de ronda ${round} enviada a todos los terminales.`);
         }
 
-        // 3. Respuesta a la peticion administrativa
         res.status(200).json({
             status: 'success',
-            message: 'Simulacion de mercado completada y notificada en tiempo real.',
+            message: `Ventas de la Ronda ${game.currentRound} completadas y notificadas.`,
+            data: { round: game.currentRound, companiesProcessed: processedCount }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Obtiene el estado financiero de todas las empresas y el estado del reloj global.
+ * MODIFICACIÓN 1.4.1: Sincronización de búsqueda con getActiveGame para consistencia en UI.
+ */
+exports.getGameStatus = async function(req, res, next) {
+    try {
+        const [companies, game] = await Promise.all([
+            Company.find().select('name cash ethicsIndex techLevel isBankrupt').sort('-cash'),
+            Game.findOne({ status: { $ne: 'finished' } }).sort({ createdAt: -1 })
+        ]);
+
+        res.status(200).json({
+            status: 'success',
             data: { 
-                round, 
-                companiesProcessed: processedCount 
+                companies,
+                game: game || { currentRound: 0, gameCode: 'SIN PARTIDA' }
             }
-        });
-    } catch (error) {
-        next(error);
-    }
-};
-
-/**
- * Obtiene el estado financiero de todas las empresas vinculadas a un juego.
- */
-exports.getGameStatus = async function(req, res, next) {
-    try {
-        // Buscamos todas las empresas y traemos sus datos clave
-        const companies = await Company.find()
-            .select('name cash ethicsIndex techLevel isBankrupt')
-            .sort('-cash'); // Ordenar por mayor capital (Ranking)
-
-        res.status(200).json({
-            status: 'success',
-            data: { companies }
-        });
-    } catch (error) {
-        next(error);
-    }
-};
-
-/**
- * Obtiene el estado financiero de todas las empresas vinculadas a un juego.
- */
-exports.getGameStatus = async function(req, res, next) {
-    try {
-        // Buscamos todas las empresas y traemos sus datos clave
-        const companies = await Company.find()
-            .select('name cash ethicsIndex techLevel isBankrupt')
-            .sort('-cash'); // Ordenar por mayor capital (Ranking)
-
-        res.status(200).json({
-            status: 'success',
-            data: { companies }
         });
     } catch (error) {
         next(error);
