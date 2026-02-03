@@ -28,4 +28,6 @@ router.post('/process-production', adminController.processProductionPhase);
 router.post('/process-logistics', adminController.processLogisticsPhase);
 router.post('/process-sales', adminController.processSalesPhase);
 
+router.get('/status', adminController.getGameStatus);
+
 module.exports = router;

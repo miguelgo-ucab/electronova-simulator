@@ -114,3 +114,41 @@ exports.processSalesPhase = async function(req, res, next) {
         next(error);
     }
 };
+
+/**
+ * Obtiene el estado financiero de todas las empresas vinculadas a un juego.
+ */
+exports.getGameStatus = async function(req, res, next) {
+    try {
+        // Buscamos todas las empresas y traemos sus datos clave
+        const companies = await Company.find()
+            .select('name cash ethicsIndex techLevel isBankrupt')
+            .sort('-cash'); // Ordenar por mayor capital (Ranking)
+
+        res.status(200).json({
+            status: 'success',
+            data: { companies }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Obtiene el estado financiero de todas las empresas vinculadas a un juego.
+ */
+exports.getGameStatus = async function(req, res, next) {
+    try {
+        // Buscamos todas las empresas y traemos sus datos clave
+        const companies = await Company.find()
+            .select('name cash ethicsIndex techLevel isBankrupt')
+            .sort('-cash'); // Ordenar por mayor capital (Ranking)
+
+        res.status(200).json({
+            status: 'success',
+            data: { companies }
+        });
+    } catch (error) {
+        next(error);
+    }
+};

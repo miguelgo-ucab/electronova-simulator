@@ -1,48 +1,51 @@
 // ============================================
 // FILE: /client/src/App.jsx
-// VERSION: 1.3.0
-// DATE: 31-01-2026
-// HOUR: 15:30
-// PURPOSE: Enrutamiento oficial con Dashboard real.
-// CHANGE LOG: Sustitucion del placeholder por DashboardPage.
-// SPEC REF: Requisitos No Funcionales - UX
+// VERSION: 1.5.1
+// DATE: 02-02-2026
+// HOUR: 16:40
+// PURPOSE: Enrutamiento inteligente con rutas relativas de raiz (./).
+// CHANGE LOG: Aseguramiento de importaciones desde la raiz de src.
+// SPEC REF: Seccion 5.2 - Panel de Administracion
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
+//
+//
+//
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './context/AuthContext'; // CAMBIO: ./ porque App esta en src
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import DecisionPage from './pages/DecisionPage';
-import { socket } from './services/socket'; 
+import AdminPage from './pages/AdminPage';
+import { socket } from './services/socket';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const { user, loading } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-navy-900 text-white font-mono uppercase tracking-tighter">
-      Iniciando Terminal de Estrategia...
-    </div>
-  );
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#0F172A] text-white font-mono uppercase">Sincronizando Terminal...</div>;
   if (!user) return <Navigate to="/login" />;
+  if (requireAdmin && user.role !== 'admin') return <Navigate to="/dashboard" />;
   return children;
 };
 
 function App() {
+  const { user } = useAuth();
   return (
     <Router>
       <Routes>
+        <Route path="/" element={
+          user ? (
+            user.role === 'admin' ? <Navigate to="/admin" /> : <Navigate to="/dashboard" />
+          ) : (
+            <Navigate to="/login" />
+          )
+        } />
         <Route path="/login" element={<LoginPage />} />
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route path="*" element={<Navigate to="/login" />} />
-        <Route path="/decision" element={<ProtectedRoute> <DecisionPage /> </ProtectedRoute> } />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/decision" element={<ProtectedRoute><DecisionPage /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminPage /></ProtectedRoute>} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
   );
