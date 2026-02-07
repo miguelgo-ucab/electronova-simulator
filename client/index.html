@@ -1,12 +1,29 @@
+<!-- ============================================ -->
+<!-- FILE: /client/index.html -->
+<!-- VERSION: 1.1.0 -->
+<!-- DATE: 06-02-2026 -->
+<!-- HOUR: 19:10 -->
+<!-- PURPOSE: Punto de entrada con carga de tipografías corporativas. -->
+<!-- CHANGE LOG: Inyección de Google Fonts (Inter + JetBrains Mono). -->
+<!-- SPEC REF: Manual de Estilo - Sección 3 -->
+<!-- RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026 -->
+<!-- ============================================ -->
+
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>client</title>
+    
+    <!-- FUENTES CORPORATIVAS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <title>ElectroNova Inc. | Simulador Estratégico</title>
   </head>
-  <body>
+  <body class="bg-slate-50 text-slate-900 antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

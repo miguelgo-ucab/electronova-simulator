@@ -1,11 +1,11 @@
 // ============================================
 // FILE: /server/src/services/simulationService.js
-// VERSION: 1.3.0
-// DATE: 31-01-2026
-// HOUR: 04:40
-// PURPOSE: Implementacion del motor de ventas basado en el algoritmo ECPCIM.
-// CHANGE LOG: Adicion de processRoundSales con elasticidad y consumo de PT.
-// SPEC REF: Seccion 2.3 - Motor de Mercado Hibrido
+// VERSION: 1.4.0
+// DATE: 03-02-2026
+// HOUR: 11:45
+// PURPOSE: Motor de simulación con cálculo de obsolescencia.
+// CHANGE LOG: Implementación de penalización del 10% para stock antiguo (>3R).
+// SPEC REF: Sección 2.2.C - Costo de Obsolescencia
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
 //
@@ -248,4 +248,33 @@ exports.processRoundSales = async function(round) {
     await Decision.updateMany({ round: round }, { isProcessed: true });
     
     return decisions.length;
+};
+
+/**
+ * Calcula y aplica el costo de obsolescencia.
+ * Formula: Costo = (Unidades * CostoProduccion) * 0.10
+ */
+exports.applyObsolescence = async function(companyId) {
+    const company = await Company.findById(companyId);
+    let totalObsolescenceCost = 0;
+
+    company.inventory.forEach(lot => {
+        // Regla: ageInRounds > 3 genera penalización
+        if (lot.type === 'PT' && lot.ageInRounds > 3) {
+            const lotValue = lot.units * lot.unitCost;
+            const penalty = lotValue * 0.10; // 10% segun Spec
+            totalObsolescenceCost += penalty;
+            
+            console.log(`[FINANCE] Obsolescencia detectada: ${lot.itemRef} en ${lot.location}. Cargo: $${penalty}`);
+        }
+        
+        // Incrementar edad para la siguiente ronda
+        if (lot.roundsUntilArrival === 0) {
+            lot.ageInRounds += 1;
+        }
+    });
+
+    company.cash -= totalObsolescenceCost;
+    await company.save();
+    return totalObsolescenceCost;
 };
