@@ -1,11 +1,11 @@
 // ============================================
 // FILE: /client/src/App.jsx
-// VERSION: 1.7.0
+// VERSION: 1.8.0
 // DATE: 07-02-2026
-// HOUR: 10:40
-// PURPOSE: Enrutamiento maestro con soporte para Lobby Administrativo.
-// CHANGE LOG: Redirección de /admin a AdminLobbyPage y /admin/console a AdminPage.
-// SPEC REF: Requisito de Gestión de Salas
+// HOUR: 17:35
+// PURPOSE: Enrutamiento optimizado sin página intermedia de unión.
+// CHANGE LOG: Eliminación de JoinRoomPage. Flujo directo Login -> Dashboard.
+// SPEC REF: Requisito P.1 - Flujo Directo
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
 
@@ -17,7 +17,6 @@ import DashboardPage from './pages/DashboardPage';
 import DecisionPage from './pages/DecisionPage';
 import AdminPage from './pages/AdminPage';         // La Consola de Juego (Ranking, Fases)
 import AdminLobbyPage from './pages/AdminLobbyPage'; // El Lobby (Crear/Borrar Salas)
-import JoinRoomPage from './pages/JoinRoomPage';
 
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const { user, loading } = useAuth();
@@ -30,16 +29,13 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
 
   if (!user) return <Navigate to="/login" />;
 
-  // Si requiere admin y no lo es, fuera.
+  // Validación de Rol: Si requiere admin y no lo es, enviar al Dashboard
   if (requireAdmin && user.role !== 'admin') {
     return <Navigate to="/dashboard" />;
   }
   
-  // Interceptor de Sala para Estudiantes:
-  // Si es estudiante, NO tiene sala asignada y NO está intentando unirse o salir -> Mándalo a unirse.
-  if (user.role === 'student' && !user.companyId?.gameId && window.location.pathname !== '/join-room') {
-     return <Navigate to="/join-room" />;
-  }
+  // NOTA: Ya no interceptamos al estudiante sin sala aquí.
+  // El Dashboard se encargará de mostrar un estado vacío o el Login de exigir el código.
 
   return children;
 };
@@ -63,11 +59,10 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         
         {/* RUTAS DE ESTUDIANTE */}
-        <Route path="/join-room" element={<ProtectedRoute><JoinRoomPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/decision" element={<ProtectedRoute><DecisionPage /></ProtectedRoute>} />
 
-        {/* RUTAS DE ADMINISTRADOR (NUEVA JERARQUÍA) */}
+        {/* RUTAS DE ADMINISTRADOR */}
         
         {/* 1. El Lobby: Donde gestiona las salas */}
         <Route path="/admin" element={

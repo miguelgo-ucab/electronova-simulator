@@ -1,16 +1,13 @@
 // ============================================
 // FILE: /server/src/models/Company.js
-// VERSION: 1.3.0
-// DATE: 01-02-2026
-// HOUR: 23:05
-// PURPOSE: Esquema de empresa con vinculacion obligatoria a partida.
-// CHANGE LOG: Aseguramiento del campo gameId para gestion de salas.
-// SPEC REF: Seccion 2.1 - Entidades
+// VERSION: 1.4.0
+// DATE: 07-02-2026
+// HOUR: 17:50
+// PURPOSE: Esquema de empresa con trazabilidad de propietario (Email).
+// CHANGE LOG: Inclusión de campo ownerEmail para reportes docentes.
+// SPEC REF: Requisito P.2 - Reportes de Profesor
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
-//
-//
-//
 
 const mongoose = require('mongoose');
 
@@ -26,13 +23,14 @@ const inventoryLotSchema = new mongoose.Schema({
 
 const companySchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true, trim: true },
+    // CAMPO NUEVO PARA REPORTE:
+    ownerEmail: { type: String, required: true }, 
     cash: { type: Number, default: 500000 },
     techLevel: { type: Number, default: 1, min: 1 },
     ethicsIndex: { type: Number, default: 50, min: 0, max: 100 },
     productionQuota: { type: Number, default: 0 },
     inventory: [inventoryLotSchema],
     isBankrupt: { type: Boolean, default: false },
-    // CAMPO CRITICO PARA LA VINCULACION
     gameId: { type: mongoose.Schema.Types.ObjectId, ref: 'Game', default: null }
 }, { timestamps: true });
 

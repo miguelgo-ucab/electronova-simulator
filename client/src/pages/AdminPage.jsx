@@ -1,11 +1,11 @@
 // ============================================
 // FILE: /client/src/pages/AdminPage.jsx
-// VERSION: 1.4.0
-// DATE: 06-02-2026
-// HOUR: 19:25
-// PURPOSE: Admin Panel estructurado con MainLayout.
-// CHANGE LOG: Adaptación al contenedor maestro con tema oscuro.
-// SPEC REF: Manual de Estilo - Sección 1
+// VERSION: 1.5.0
+// DATE: 07-02-2026
+// HOUR: 18:00
+// PURPOSE: Panel Admin corregido con visualización de email y footer oficial.
+// CHANGE LOG: Inclusión de columna Email y corrección de derechos de autor.
+// SPEC REF: Requisito P.2 - Reportes
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
 
@@ -13,8 +13,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { Users, Play, ShieldAlert, ArrowLeft, RefreshCw, Clock, Activity, Database } from 'lucide-react';
-import MainLayout from '../components/MainLayout'; // NUEVO
+import { Users, Play, ShieldAlert, ArrowLeft, RefreshCw, Clock, Activity, Database, Mail } from 'lucide-react';
+import MainLayout from '../components/MainLayout';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -24,7 +24,6 @@ const AdminPage = () => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
 
-  // Paleta oficial
   const COLORS = { navy: '#0F172A', blue: '#3B82F6', green: '#10B981', red: '#EF4444', slate: '#1E293B' };
 
   const fetchStatus = async () => {
@@ -69,10 +68,8 @@ const AdminPage = () => {
   );
 
   return (
-    // USAMOS MAINLAYOUT CON FONDO NAVY (Oscuro)
     <MainLayout className="bg-[#0F172A] text-slate-100">
       
-      {/* NAV */}
       <nav className="border-b border-slate-800 p-6 flex justify-between items-center sticky top-0 z-50 backdrop-blur-md bg-[#0F172A]/80">
         <div className="flex items-center gap-4">
           <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 animate-pulse">
@@ -96,10 +93,7 @@ const AdminPage = () => {
             </div>
           </div>
           
-          <button 
-            onClick={handleLogout} 
-            className="flex items-center gap-2 text-slate-400 hover:text-white font-black text-[10px] uppercase tracking-[0.2em] transition-all"
-          >
+          <button onClick={handleLogout} className="flex items-center gap-2 text-slate-400 hover:text-white font-black text-[10px] uppercase tracking-[0.2em] transition-all">
             <ArrowLeft size={14} /> Salir
           </button>
         </div>
@@ -107,7 +101,7 @@ const AdminPage = () => {
 
       <div className="p-8 lg:p-12 w-full grid grid-cols-1 lg:grid-cols-3 gap-10">
         
-        {/* RANKING */}
+        {/* RANKING CON EMAILS */}
         <div className="lg:col-span-2">
           <div className="rounded-[2.5rem] p-8 lg:p-10 border border-slate-800 shadow-2xl bg-slate-900/50">
             <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-800">
@@ -121,15 +115,20 @@ const AdminPage = () => {
             <table className="w-full text-left">
               <thead className="text-slate-500 text-[9px] font-black uppercase tracking-[0.3em]">
                 <tr>
-                  <th className="pb-6">Corp</th>
+                  <th className="pb-6">Corporación / Estudiante</th>
                   <th className="pb-6">Capital</th>
                   <th className="pb-6 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/50 text-sm">
                 {companies.map((c) => (
-                  <tr key={c._id} className="hover:bg-white/[0.03] transition-colors">
-                    <td className="py-5 font-bold text-blue-400">{c.name}</td>
+                  <tr key={c._id} className="hover:bg-white/[0.03] transition-colors group">
+                    <td className="py-5">
+                      <div className="font-bold text-blue-400">{c.name}</div>
+                      <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-1">
+                        <Mail size={10} /> {c.ownerEmail || 'Sin email registrado'}
+                      </div>
+                    </td>
                     <td className="py-5 font-mono font-bold text-white tracking-tight">
                       $ {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2 }).format(c.cash)}
                     </td>
@@ -168,6 +167,13 @@ const AdminPage = () => {
           </div>
         </div>
       </div>
+      
+      {/* FOOTER CORREGIDO */}
+      <footer className="p-10 text-center border-t border-slate-800/50 mt-10">
+        <p className="text-slate-600 text-[10px] font-black tracking-[0.2em]">
+          © Maribel Pinheiro & Miguel González | Ene-2026
+        </p>
+      </footer>
     </MainLayout>
   );
 };

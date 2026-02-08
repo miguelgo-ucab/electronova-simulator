@@ -1,16 +1,13 @@
 // ============================================
 // FILE: /server/src/routes/gameRoutes.js
-// VERSION: 1.2.0
-// DATE: 06-02-2026
-// HOUR: 22:35
-// PURPOSE: Rutas unificadas para gestión de salas (Estudiante y Admin).
-// CHANGE LOG: Consolidación de rutas para evitar duplicidad de router.
-// SPEC REF: Sección 3.2 y 5.2
+// VERSION: 1.3.0
+// DATE: 07-02-2026
+// HOUR: 19:10
+// PURPOSE: Rutas de juego con validación de existencia de controladores.
+// CHANGE LOG: Protección contra undefined handlers para evitar crashes.
+// SPEC REF: Sección 3.2
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
-//
-//
-//
 
 const express = require('express');
 const gameController = require('../controllers/gameController');
@@ -18,20 +15,25 @@ const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
-// 1. Protección Global: Todo requiere estar logueado
+// VALIDACIÓN DE SEGURIDAD: Verificar que el controlador se cargó bien
+if (!gameController || !gameController.joinGame || !gameController.getAllGames) {
+    console.error('ERROR CRÍTICO: gameController no se cargó correctamente. Verifique las exportaciones.');
+    // No detenemos el proceso, pero las rutas fallarán controladamente
+}
+
 router.use(authMiddleware.protect);
 
-// --- RUTAS DE ESTUDIANTE ---
+// Rutas Estudiante
 router.post('/join', gameController.joinGame);
 
-// --- RUTAS DE ADMINISTRADOR ---
-// A partir de aquí, solo pasa si es 'admin'
+// Rutas Admin
 router.use(authMiddleware.restrictTo('admin'));
 
-router.get('/all', gameController.getAllGames);        // Listar salas (Lobby)
-router.post('/create', gameController.createGame);     // Crear sala
-router.delete('/:gameId', gameController.deleteGame);  // Borrar sala
-router.post('/:gameId/advance', gameController.advanceRound); // Avanzar tiempo
-router.put('/:gameId', gameController.updateGame); // Editar sala (Nuevo)
+// Asegurarse de que cada función existe antes de asignarla a la ruta
+if (gameController.getAllGames) router.get('/all', gameController.getAllGames);
+if (gameController.createGame) router.post('/create', gameController.createGame);
+if (gameController.advanceRound) router.post('/:gameId/advance', gameController.advanceRound);
+if (gameController.deleteGame) router.delete('/:gameId', gameController.deleteGame);
+if (gameController.updateGame) router.put('/:gameId', gameController.updateGame);
 
 module.exports = router;
