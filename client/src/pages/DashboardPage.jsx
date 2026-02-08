@@ -1,11 +1,11 @@
 // ============================================
 // FILE: /client/src/pages/DashboardPage.jsx
-// VERSION: 1.6.0
-// DATE: 06-02-2026
-// HOUR: 19:20
-// PURPOSE: Implementación de MainLayout para estructura consistente.
-// CHANGE LOG: Envoltura del contenido en MainLayout con fondo gris SaaS.
-// SPEC REF: Manual de Estilo - Sección 1
+// VERSION: 1.7.0
+// DATE: 08-02-2026
+// HOUR: 08:10
+// PURPOSE: Dashboard con suscripción a sala de Socket.IO específica.
+// CHANGE LOG: Implementación de socket.emit('join-game') para aislamiento de eventos.
+// SPEC REF: Sección 3.5 - WebSockets
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
 
@@ -15,7 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { socket } from '../services/socket';
 import { Wallet, ShieldCheck, Cpu, Package, TrendingUp, Save, Bell, Globe } from 'lucide-react';
-import MainLayout from '../components/MainLayout'; // IMPORTACIÓN NUEVA
+import MainLayout from '../components/MainLayout';
 
 const DashboardPage = () => {
   const { user, logout } = useAuth();
@@ -32,8 +32,21 @@ const DashboardPage = () => {
     try {
       const response = await api.get('/companies/my-company');
       const data = response.data.data.company;
-      if (!data.gameId) { navigate('/join-room'); return; }
+      
+      if (!data.gameId) { 
+        navigate('/join-room'); 
+        return; 
+      }
+      
       setCompany(data);
+
+      // --- CAMBIO CRÍTICO: UNIRSE A LA SALA DE SOCKET ---
+      if (data.gameId && data.gameId.gameCode) {
+        console.log('[SOCKET] Uniéndose a sala:', data.gameId.gameCode);
+        socket.emit('join-game', data.gameId.gameCode);
+      }
+      // --------------------------------------------------
+
     } catch (error) {
       console.error('Error de carga');
     } finally {
@@ -43,35 +56,43 @@ const DashboardPage = () => {
 
   useEffect(() => {
     fetchCompanyData();
+
+    // Escuchar eventos solo de mi sala (El servidor ya filtra por mi gameCode)
     socket.on('roundProcessed', (data) => {
-      setNotification(`RONDA ${data.round} FINALIZADA`);
-      fetchCompanyData();
+      setNotification(`¡RONDA ${data.round} FINALIZADA!`);
+      fetchCompanyData(); // Recargar datos financieros
       setTimeout(() => setNotification(null), 6000);
     });
-    return () => { socket.off('roundProcessed'); };
+
+    socket.on('timeAdvance', (data) => {
+      setNotification(`NUEVA RONDA: ${data.newRound}`);
+      fetchCompanyData(); // Recargar quota
+      setTimeout(() => setNotification(null), 6000);
+    });
+
+    return () => { 
+      socket.off('roundProcessed');
+      socket.off('timeAdvance');
+    };
   }, [fetchCompanyData]);
 
   if (loading) return (
     <MainLayout className="bg-[#0F172A] flex items-center justify-center text-white">
       <div className="flex flex-col items-center gap-4 animate-pulse">
         <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="font-mono text-xs tracking-[0.3em] uppercase">Conectando...</p>
+        <p className="font-mono text-xs tracking-[0.3em] uppercase">Conectando Satélite...</p>
       </div>
     </MainLayout>
   );
 
   return (
-    // USAMOS MAINLAYOUT CON FONDO ESPECÍFICO
     <MainLayout className="bg-[#F1F5F9]">
-      
-      {/* NOTIFICACIÓN */}
       {notification && (
         <div className="fixed top-24 right-8 z-[100] bg-[#0F172A] text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce border border-slate-700">
           <Bell size={20} className="text-blue-400" /> <span className="font-bold text-xs tracking-wide">{notification}</span>
         </div>
       )}
 
-      {/* NAV */}
       <nav className="bg-[#0F172A] text-white px-8 py-5 shadow-xl flex justify-between items-center sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-500/20"><TrendingUp size={20} /></div>
@@ -89,7 +110,6 @@ const DashboardPage = () => {
       </nav>
 
       <div className="p-8 lg:p-12 w-full max-w-[1600px] mx-auto">
-        {/* HEADER */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
           <div>
             <div className="flex items-center gap-2 text-blue-700 font-bold text-[10px] uppercase tracking-[0.2em] mb-3 bg-blue-100/50 w-fit px-3 py-1 rounded-full">
@@ -106,7 +126,6 @@ const DashboardPage = () => {
           </button>
         </header>
 
-        {/* KPI GRID */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <StatCard icon={<Wallet size={24} />} label="Capital Líquido" value={`$ ${formatMoney(company?.cash)}`} color="bg-emerald-500" />
           <StatCard icon={<ShieldCheck size={24} />} label="Índice de Ética" value={`${company?.ethicsIndex}/100`} color="bg-blue-500" />
@@ -114,7 +133,6 @@ const DashboardPage = () => {
           <StatCard icon={<Package size={24} />} label="Capacidad Planta" value={`${company?.productionQuota} u.`} color="bg-orange-500" />
         </div>
 
-        {/* INVENTORY TABLE */}
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-10 py-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
             <h3 className="font-black text-slate-800 text-xs uppercase tracking-[0.2em]">Activos en Almacén</h3>

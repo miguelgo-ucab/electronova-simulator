@@ -1,11 +1,11 @@
 // ============================================
 // FILE: /server/src/controllers/adminController.js
-// VERSION: 1.5.0
-// DATE: 07-02-2026
-// HOUR: 20:25
-// PURPOSE: Monitor de competencia con trazabilidad de correos electrónicos.
-// CHANGE LOG: Filtrado de empresas por gameId y selección de ownerEmail.
-// SPEC REF: Sección 5.2 (Panel de Administración)
+// VERSION: 2.0.0
+// DATE: 08-02-2026
+// HOUR: 07:25
+// PURPOSE: Controlador administrativo con soporte para gestión específica por ID.
+// CHANGE LOG: Reemplazo de getActiveGame por búsqueda directa mediante gameId.
+// SPEC REF: Sección 5.2 - Panel de Administración
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
 
@@ -14,38 +14,21 @@ const Game = require('../models/Game');
 const Company = require('../models/Company');
 
 /**
- * Obtiene el estado de la sala activa y el ranking de sus empresas.
- * MODIFICACIÓN: Aislamiento estricto de datos por sala.
+ * Helper para validar la sala específica que se quiere controlar.
  */
-exports.getGameStatus = async function(req, res, next) {
-    try {
-        // 1. Buscamos el juego más reciente creado por este profesor
-        const game = await Game.findOne({ createdBy: req.user._id, status: { $ne: 'finished' } }).sort({ createdAt: -1 });
-        
-        let companies = [];
-        if (game) {
-            // 2. FILTRO DE SEGURIDAD: Solo empresas inscritas en ESTE juego específico
-            companies = await Company.find({ gameId: game._id })
-                .select('name ownerEmail cash ethicsIndex techLevel isBankrupt')
-                .sort('-cash'); // Ranking por capital acumulado
-        }
-
-        res.status(200).json({
-            status: 'success',
-            data: { 
-                companies,
-                game: game || { currentRound: 0, gameCode: 'SIN SALA ACTIVA' }
-            }
-        });
-    } catch (error) {
-        next(error);
-    }
+const getTargetGame = async (gameId) => {
+    if (!gameId) throw new Error('ID de sala no proporcionado.');
+    const game = await Game.findById(gameId);
+    if (!game) throw new Error('Sala no encontrada.');
+    return game;
 };
 
-// ... (Las funciones de processPhase se mantienen llamando a simulationService)
+// --- FASES DE PROCESAMIENTO ---
+// Ahora todas reciben gameId desde el cuerpo de la petición
+
 exports.processProcurementPhase = async function(req, res, next) {
     try {
-        const game = await Game.findOne({ createdBy: req.user._id, status: { $ne: 'finished' } }).sort({ createdAt: -1 });
+        const game = await getTargetGame(req.body.gameId);
         const processedCount = await simulationService.processRoundProcurement(game.currentRound);
         res.status(200).json({ status: 'success', data: { round: game.currentRound, processedCount } });
     } catch (error) { next(error); }
@@ -53,7 +36,7 @@ exports.processProcurementPhase = async function(req, res, next) {
 
 exports.processProductionPhase = async function(req, res, next) {
     try {
-        const game = await Game.findOne({ createdBy: req.user._id, status: { $ne: 'finished' } }).sort({ createdAt: -1 });
+        const game = await getTargetGame(req.body.gameId);
         const processedCount = await simulationService.processRoundProduction(game.currentRound);
         res.status(200).json({ status: 'success', data: { round: game.currentRound, processedCount } });
     } catch (error) { next(error); }
@@ -61,7 +44,7 @@ exports.processProductionPhase = async function(req, res, next) {
 
 exports.processLogisticsPhase = async function(req, res, next) {
     try {
-        const game = await Game.findOne({ createdBy: req.user._id, status: { $ne: 'finished' } }).sort({ createdAt: -1 });
+        const game = await getTargetGame(req.body.gameId);
         const processedCount = await simulationService.processRoundLogistics(game.currentRound);
         res.status(200).json({ status: 'success', data: { round: game.currentRound, processedCount } });
     } catch (error) { next(error); }
@@ -69,11 +52,45 @@ exports.processLogisticsPhase = async function(req, res, next) {
 
 exports.processSalesPhase = async function(req, res, next) {
     try {
-        const game = await Game.findOne({ createdBy: req.user._id, status: { $ne: 'finished' } }).sort({ createdAt: -1 });
+        const game = await getTargetGame(req.body.gameId);
         const processedCount = await simulationService.processRoundSales(game.currentRound);
+
         if (global.io) {
-            global.io.emit('roundProcessed', { round: game.currentRound, message: 'Mercado Cerrado' });
+            // CAMBIO CRÍTICO: Emitir SOLO a la sala específica
+            global.io.to(game.gameCode).emit('roundProcessed', {
+                round: game.currentRound,
+                timestamp: new Date().toISOString(),
+                message: `Mercado de Ronda ${game.currentRound} cerrado.`
+            });
+            console.log(`[SOCKET] Notificación enviada a sala: ${game.gameCode}`);
         }
+
         res.status(200).json({ status: 'success', data: { round: game.currentRound, processedCount } });
     } catch (error) { next(error); }
+};
+
+/**
+ * Obtiene el estado de UNA sala específica basada en el query param ?gameId=...
+ */
+exports.getGameStatus = async function(req, res, next) {
+    try {
+        const { gameId } = req.query;
+        if (!gameId) throw new Error('ID de sala requerido.');
+
+        const game = await Game.findById(gameId);
+        let companies = [];
+        
+        if (game) {
+            companies = await Company.find({ gameId: game._id })
+                .select('name ownerEmail cash ethicsIndex techLevel isBankrupt')
+                .sort('-cash');
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: { companies, game }
+        });
+    } catch (error) {
+        next(error);
+    }
 };

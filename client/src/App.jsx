@@ -72,7 +72,7 @@ function App() {
         } />
 
         {/* 2. La Consola: Donde controla UNA partida específica */}
-        <Route path="/admin/console" element={
+        <Route path="/admin/console/:gameId" element={
           <ProtectedRoute requireAdmin={true}>
             <AdminPage />
           </ProtectedRoute>

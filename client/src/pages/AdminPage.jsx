@@ -1,16 +1,16 @@
 // ============================================
 // FILE: /client/src/pages/AdminPage.jsx
-// VERSION: 1.5.0
-// DATE: 07-02-2026
-// HOUR: 18:00
-// PURPOSE: Panel Admin corregido con visualización de email y footer oficial.
-// CHANGE LOG: Inclusión de columna Email y corrección de derechos de autor.
-// SPEC REF: Requisito P.2 - Reportes
+// VERSION: 2.1.0
+// DATE: 08-02-2026
+// HOUR: 12:45
+// PURPOSE: Consola administrativa con manejo de errores detallado.
+// CHANGE LOG: Mejora en captura de errores en handleAdvanceRound.
+// SPEC REF: Sección 5.2 - Panel de Administración
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
 
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { Users, Play, ShieldAlert, ArrowLeft, RefreshCw, Clock, Activity, Database, Mail } from 'lucide-react';
@@ -18,6 +18,7 @@ import MainLayout from '../components/MainLayout';
 
 const AdminPage = () => {
   const navigate = useNavigate();
+  const { gameId } = useParams(); // ID de la sala desde la URL
   const { logout } = useAuth();
   const [companies, setCompanies] = useState([]);
   const [game, setGame] = useState(null);
@@ -28,42 +29,59 @@ const AdminPage = () => {
 
   const fetchStatus = async () => {
     try {
-      const res = await api.get('/admin/status');
+      // Solicitamos el estado específico de ESTA sala
+      const res = await api.get(`/admin/status?gameId=${gameId}`);
       setCompanies(res.data.data.companies || []);
       setGame(res.data.data.game || null);
-    } catch (err) { console.error('Sync Error'); } 
-    finally { setLoading(false); }
+    } catch (err) {
+      console.error('Error de sincronización:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchStatus(); }, []);
+  useEffect(() => { 
+    if (gameId) fetchStatus(); 
+  }, [gameId]);
 
   const runPhase = async (endpoint, label) => {
     if (!window.confirm(`¿EJECUTAR CIERRE DE ${label.toUpperCase()}?`)) return;
     setProcessing(true);
     try {
-      await api.post(`/admin/${endpoint}`);
+      await api.post(`/admin/${endpoint}`, { gameId, round: game?.currentRound });
+      alert(`${label} procesada con éxito.`);
       fetchStatus();
-    } catch (err) { alert('ERROR DE MOTOR: ' + (err.response?.data?.message || 'TIMEOUT')); }
-    finally { setProcessing(false); }
+    } catch (err) {
+      alert('FALLO EN EL MOTOR: ' + (err.response?.data?.message || err.message));
+    } finally { setProcessing(false); }
   };
 
   const handleAdvanceRound = async () => {
     if (!game) return;
-    if (!window.confirm("¿AVANZAR RELOJ GLOBAL?")) return;
-    try { await api.post(`/games/${game._id}/advance`); fetchStatus(); } 
-    catch (err) { alert("ERROR DE SINCRONIZACIÓN."); }
+    if (!window.confirm(`¿AVANZAR A RONDA ${game.currentRound + 1}? Esta acción es irreversible.`)) return;
+    
+    setProcessing(true);
+    try {
+      // Llamada al endpoint de avance de tiempo
+      await api.post(`/games/${game._id}/advance`);
+      alert("¡Reloj del juego actualizado exitosamente!");
+      fetchStatus();
+    } catch (err) {
+      // AQUI ESTABA EL ERROR GENERICO. AHORA MOSTRAMOS LA VERDAD:
+      console.error(err);
+      alert("ERROR AL AVANZAR RONDA: " + (err.response?.data?.message || err.message));
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const handleLogout = () => {
-    if (window.confirm("¿FINALIZAR SESIÓN DE MANDO?")) {
-      logout();
-      navigate('/login');
-    }
+  const handleExit = () => {
+    navigate('/admin'); // Volver al Lobby
   };
 
   if (loading) return (
     <MainLayout className="bg-[#0F172A] flex items-center justify-center">
-      <div className="text-blue-500 font-mono animate-pulse tracking-widest text-lg">[SECURE CONNECTION...]</div>
+      <div className="text-blue-500 font-mono animate-pulse tracking-widest text-lg">[CONECTANDO A SALA {gameId}...]</div>
     </MainLayout>
   );
 
@@ -83,8 +101,8 @@ const AdminPage = () => {
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-4 px-5 py-2 rounded-xl border border-slate-700 bg-slate-900 shadow-inner">
             <div className="flex flex-col items-end">
-              <span className="text-[9px] font-black text-slate-500 uppercase">Sala</span>
-              <span className="text-xs font-bold text-white uppercase tracking-wider">{game?.gameCode || 'N/A'}</span>
+              <span className="text-[9px] font-black text-slate-500 uppercase">Sala Activa</span>
+              <span className="text-xs font-bold text-white uppercase tracking-wider">{game?.gameCode || 'ERROR'}</span>
             </div>
             <div className="w-px h-6 bg-slate-700"></div>
             <div className="flex flex-col items-start">
@@ -93,20 +111,20 @@ const AdminPage = () => {
             </div>
           </div>
           
-          <button onClick={handleLogout} className="flex items-center gap-2 text-slate-400 hover:text-white font-black text-[10px] uppercase tracking-[0.2em] transition-all">
-            <ArrowLeft size={14} /> Salir
+          <button onClick={handleExit} className="flex items-center gap-2 text-slate-400 hover:text-white font-black text-[10px] uppercase tracking-[0.2em] transition-all">
+            <ArrowLeft size={14} /> Volver al Lobby
           </button>
         </div>
       </nav>
 
       <div className="p-8 lg:p-12 w-full grid grid-cols-1 lg:grid-cols-3 gap-10">
         
-        {/* RANKING CON EMAILS */}
+        {/* RANKING */}
         <div className="lg:col-span-2">
           <div className="rounded-[2.5rem] p-8 lg:p-10 border border-slate-800 shadow-2xl bg-slate-900/50">
             <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-800">
               <h3 className="text-base font-black flex items-center gap-3 tracking-[0.2em] uppercase">
-                <Activity style={{ color: COLORS.blue }} size={18} /> Monitor Activo
+                <Activity style={{ color: COLORS.blue }} size={18} /> Monitor: {game?.gameCode}
               </h3>
               <button onClick={fetchStatus} className="p-2 hover:bg-slate-800 rounded-full transition-all">
                 <RefreshCw size={18} className={processing ? 'animate-spin' : ''} />
@@ -126,7 +144,7 @@ const AdminPage = () => {
                     <td className="py-5">
                       <div className="font-bold text-blue-400">{c.name}</div>
                       <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-1">
-                        <Mail size={10} /> {c.ownerEmail || 'Sin email registrado'}
+                        <Mail size={10} /> {c.ownerEmail || 'Sin email'}
                       </div>
                     </td>
                     <td className="py-5 font-mono font-bold text-white tracking-tight">
@@ -146,7 +164,7 @@ const AdminPage = () => {
         <div className="space-y-8">
           <div className="rounded-[2.5rem] p-8 lg:p-10 border border-slate-800 shadow-2xl bg-slate-900/50">
             <h3 className="text-base font-black mb-8 flex items-center gap-3 uppercase tracking-[0.2em]" style={{ color: COLORS.red }}>
-              <Database size={18} /> Secuencia
+              <Database size={18} /> Control de Ciclo
             </h3>
             <div className="space-y-3">
               <PhaseButton label="1. Abastecimiento" onClick={() => runPhase('process-procurement', 'Abastecimiento')} disabled={processing} color={COLORS.slate} />
@@ -167,13 +185,6 @@ const AdminPage = () => {
           </div>
         </div>
       </div>
-      
-      {/* FOOTER CORREGIDO */}
-      <footer className="p-10 text-center border-t border-slate-800/50 mt-10">
-        <p className="text-slate-600 text-[10px] font-black tracking-[0.2em]">
-          © Maribel Pinheiro & Miguel González | Ene-2026
-        </p>
-      </footer>
     </MainLayout>
   );
 };

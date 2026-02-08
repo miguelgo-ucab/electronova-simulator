@@ -84,6 +84,11 @@ const AdminLobbyPage = () => {
     catch (error) { alert('Error al eliminar'); }
   };
 
+  const handleEnter = (gameId) => {
+    // Navegación precisa a la sala seleccionada
+    navigate(`/admin/console/${gameId}`);
+  };
+
   const handleLogout = () => {
     if (window.confirm("¿Cerrar sesión de administrador?")) {
       localStorage.removeItem('token');
@@ -187,7 +192,7 @@ const AdminLobbyPage = () => {
               
               <div className="flex gap-2 mt-6">
                 <button 
-                  onClick={() => navigate('/admin/console')}
+                  onClick={() => handleEnter(game._id)} // Pasamos el ID, no el código
                   className="flex-1 bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-300 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
                 >
                   <LogIn size={14} /> Gestionar
