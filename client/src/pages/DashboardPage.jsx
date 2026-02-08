@@ -169,9 +169,9 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      <footer className="py-10 text-center">
-        <p className="text-slate-400 text-[10px] font-black tracking-[0.3em] uppercase opacity-60">
-          © ElectroNova Inc. 2026
+      <footer className="p-10 text-center">
+        <p className="text-slate-400 text-[10px] font-black tracking-[0.2em] uppercase opacity-60">
+          © Maribel Pinheiro & Miguel González | Ene-2026
         </p>
       </footer>
     </MainLayout>

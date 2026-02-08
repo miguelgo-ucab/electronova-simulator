@@ -1,24 +1,25 @@
 // ============================================
 // FILE: /client/src/pages/AdminPage.jsx
-// VERSION: 2.1.0
+// VERSION: 2.3.0
 // DATE: 08-02-2026
-// HOUR: 12:45
-// PURPOSE: Consola administrativa con manejo de errores detallado.
-// CHANGE LOG: Mejora en captura de errores en handleAdvanceRound.
-// SPEC REF: Sección 5.2 - Panel de Administración
+// HOUR: 15:35
+// PURPOSE: Consola administrativa con corrección de sala de Sockets.
+// CHANGE LOG: Corrección de join-game usando gameCode en lugar de gameId.
+// SPEC REF: Sección 3.5 - WebSockets
 // RIGHTS: © Maribel Pinheiro & Miguel González | Ene-2026
 // ============================================
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { socket } from '../services/socket';
 import { Users, Play, ShieldAlert, ArrowLeft, RefreshCw, Clock, Activity, Database, Mail } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 
 const AdminPage = () => {
   const navigate = useNavigate();
-  const { gameId } = useParams(); // ID de la sala desde la URL
+  const { gameId } = useParams();
   const { logout } = useAuth();
   const [companies, setCompanies] = useState([]);
   const [game, setGame] = useState(null);
@@ -27,9 +28,8 @@ const AdminPage = () => {
 
   const COLORS = { navy: '#0F172A', blue: '#3B82F6', green: '#10B981', red: '#EF4444', slate: '#1E293B' };
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
-      // Solicitamos el estado específico de ESTA sala
       const res = await api.get(`/admin/status?gameId=${gameId}`);
       setCompanies(res.data.data.companies || []);
       setGame(res.data.data.game || null);
@@ -38,11 +38,34 @@ const AdminPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [gameId]);
 
+  // 1. Carga inicial de datos
   useEffect(() => { 
     if (gameId) fetchStatus(); 
-  }, [gameId]);
+  }, [gameId, fetchStatus]);
+
+  // 2. Conexión al Socket (SOLO cuando ya tenemos el gameCode)
+  useEffect(() => {
+    if (game?.gameCode) {
+      console.log(`[ADMIN] Conectando a sala de tiempo real: ${game.gameCode}`);
+      socket.emit('join-game', game.gameCode);
+
+      // Escuchar avance de ronda
+      const handleTimeAdvance = (data) => {
+        console.log('[ADMIN] Nueva ronda detectada:', data.newRound);
+        fetchStatus(); // Recargar datos visuales
+      };
+
+      socket.on('timeAdvance', handleTimeAdvance);
+      socket.on('roundProcessed', () => fetchStatus()); // También recargar si se cierran ventas
+
+      return () => {
+        socket.off('timeAdvance', handleTimeAdvance);
+        socket.off('roundProcessed');
+      };
+    }
+  }, [game?.gameCode, fetchStatus]);
 
   const runPhase = async (endpoint, label) => {
     if (!window.confirm(`¿EJECUTAR CIERRE DE ${label.toUpperCase()}?`)) return;
@@ -50,6 +73,7 @@ const AdminPage = () => {
     try {
       await api.post(`/admin/${endpoint}`, { gameId, round: game?.currentRound });
       alert(`${label} procesada con éxito.`);
+      // No hace falta fetchStatus manual si el socket responde, pero lo dejamos por seguridad
       fetchStatus();
     } catch (err) {
       alert('FALLO EN EL MOTOR: ' + (err.response?.data?.message || err.message));
@@ -62,21 +86,24 @@ const AdminPage = () => {
     
     setProcessing(true);
     try {
-      // Llamada al endpoint de avance de tiempo
       await api.post(`/games/${game._id}/advance`);
-      alert("¡Reloj del juego actualizado exitosamente!");
-      fetchStatus();
+      // El socket se encargará de actualizar la UI
     } catch (err) {
-      // AQUI ESTABA EL ERROR GENERICO. AHORA MOSTRAMOS LA VERDAD:
       console.error(err);
       alert("ERROR AL AVANZAR RONDA: " + (err.response?.data?.message || err.message));
-    } finally {
       setProcessing(false);
     }
   };
 
+  const handleLogout = () => {
+    if (window.confirm("¿FINALIZAR SESIÓN DE ADMINISTRACIÓN?")) {
+      logout();
+      navigate('/login');
+    }
+  };
+
   const handleExit = () => {
-    navigate('/admin'); // Volver al Lobby
+    navigate('/admin');
   };
 
   if (loading) return (
@@ -113,6 +140,10 @@ const AdminPage = () => {
           
           <button onClick={handleExit} className="flex items-center gap-2 text-slate-400 hover:text-white font-black text-[10px] uppercase tracking-[0.2em] transition-all">
             <ArrowLeft size={14} /> Volver al Lobby
+          </button>
+          
+          <button onClick={handleLogout} className="flex items-center gap-2 text-red-500 hover:text-red-400 font-black text-[10px] uppercase tracking-[0.2em] transition-all ml-4 border-l border-slate-700 pl-6">
+            <ArrowLeft size={14} /> Desconectar
           </button>
         </div>
       </nav>
@@ -185,6 +216,12 @@ const AdminPage = () => {
           </div>
         </div>
       </div>
+      
+      <footer className="p-10 text-center border-t border-slate-800/50 mt-10">
+        <p className="text-slate-600 text-[10px] font-black tracking-[0.2em]">
+          © Maribel Pinheiro & Miguel González | Ene-2026
+        </p>
+      </footer>
     </MainLayout>
   );
 };

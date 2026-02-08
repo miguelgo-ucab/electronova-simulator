@@ -332,10 +332,12 @@ const DecisionPage = () => {
                    ))}
                  </div>
                </div>
-            )}
-
-          </div>
+            )}          
+          </div>          
         </div>
+        <footer className="p-10 text-center text-slate-400 text-[10px] font-black tracking-[0.2em]">
+            © Maribel Pinheiro & Miguel González | Ene-2026
+        </footer>
       </main>
     </div>
   );

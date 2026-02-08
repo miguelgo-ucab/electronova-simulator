@@ -216,6 +216,11 @@ const AdminLobbyPage = () => {
           ))}
         </div>
       </main>
+      <footer className="p-10 text-center border-t border-slate-800/50 mt-10">
+        <p className="text-slate-600 text-[10px] font-black tracking-[0.2em]">
+          © Maribel Pinheiro & Miguel González | Ene-2026
+        </p>
+      </footer>
     </MainLayout>
   );
 };
